@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Kostky - Počítadlo Bodů</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=MedievalSharp&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --parchment-bg: #f4e8c1;
+            --wood-dark: #140c08;
+            --wood-panel: #271911;
+            --gold-accent: #c69214;
+            --gold-light: #f5d77f;
+            --border-bronze: #794a24;
+            --wax-red: #8f1d1d;
+        }
+
+        body {
+            font-family: 'Cinzel', serif;
+            background-color: var(--wood-dark);
+            background-image: 
+                radial-gradient(circle at 50% 15%, rgba(55, 34, 21, 0.88) 0%, rgba(18, 11, 8, 0.98) 100%),
+                repeating-linear-gradient(45deg, rgba(0,0,0,0.12) 0, rgba(0,0,0,0.12) 2px, transparent 2px, transparent 5px);
+            color: #ebdcb9;
+            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .medieval-font {
+            font-family: 'MedievalSharp', cursive;
+        }
+
+        .parchment {
+            background-color: var(--parchment-bg);
+            background-image: 
+                radial-gradient(#d3be94 15%, transparent 16%),
+                radial-gradient(#eeddb5 15%, transparent 16%);
+            background-size: 24px 24px;
+            background-position: 0 0, 12px 12px;
+            color: #2b1a0d;
+            box-shadow: inset 0 0 35px rgba(92, 58, 26, 0.5), 0 8px 24px rgba(0,0,0,0.7);
+            border: 2px solid var(--border-bronze);
+        }
+
+        .wood-box {
+            background-color: var(--wood-panel);
+            border: 2px solid var(--border-bronze);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.65), inset 0 0 12px rgba(0,0,0,0.55);
+        }
+
+        .gold-glow {
+            text-shadow: 0 0 10px rgba(198, 146, 20, 0.7);
+        }
+
+        /* Active player carousel button */
+        .player-pill {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .player-pill.active {
+            background: linear-gradient(180deg, #57371f 0%, #362011 100%);
+            border-color: var(--gold-light);
+            box-shadow: 0 0 10px rgba(245, 215, 127, 0.45);
+            transform: translateY(-2px);
+        }
+
+        .player-pill.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; 
+            height: 0; 
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid var(--gold-light);
+        }
+
+        /* Die Dice Button Styles */
+        .dice-tap-btn {
+            background: linear-gradient(180deg, #382417 0%, #29180d 100%);
+            border: 1px solid var(--border-bronze);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+            transition: transform 0.08s ease, background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .dice-tap-btn:active {
+            transform: scale(0.95);
+            background: #4a301f;
+            border-color: var(--gold-accent);
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        @keyframes shakeAction {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .shake {
+            animation: shakeAction 0.35s ease-in-out;
+        }
+    </style>
+</head>
+<body class="p-2 sm:p-4 md:p-6 pb-20 select-none flex flex-col items-center">
+
+    <!-- Top Navigation & Header -->
+    <header class="w-full max-w-5xl mb-3 flex items-center justify-between gap-2 border-b-2 border-[#794a24] pb-2 px-1">
+        <!-- Logo & App Title -->
+        <div class="flex items-center gap-2 min-w-0">
+            <div class="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg bg-[#3a2618] border-2 border-[#c69214] flex items-center justify-center text-[#f5d77f] text-base sm:text-lg shadow">
+                <i class="fa-solid fa-dice-d6"></i>
+            </div>
+            <h1 class="text-base sm:text-xl font-black tracking-widest text-[#f5d77f] uppercase gold-glow truncate">
+                KOSTKY
+            </h1>
+        </div>
+
+        <!-- Right Side: View Tabs and Settings Button -->
+        <div class="flex items-center gap-1.5 shrink-0">
+            <!-- Mobile View Switcher Tabs -->
+            <div class="flex md:hidden bg-[#180e09] p-0.5 rounded-lg border border-[#794a24]">
+                <button onclick="switchView('control')" id="btnTabControl" class="px-2.5 py-1 text-[11px] font-bold rounded bg-[#794a24] text-[#f5d77f] border border-[#c69214] flex items-center gap-1 transition">
+                    <i class="fa-solid fa-gamepad text-[10px]"></i>
+                    <span>Ovládání</span>
+                </button>
+                <button onclick="switchView('leaderboard')" id="btnTabBoard" class="px-2.5 py-1 text-[11px] font-bold rounded text-[#bda282] flex items-center gap-1 transition">
+                    <i class="fa-solid fa-trophy text-[10px]"></i>
+                    <span>Žebříček</span>
+                </button>
+            </div>
+
+            <!-- Settings / Setup Trigger -->
+            <button onclick="openConfigModal()" aria-label="Nastavení" class="p-1.5 sm:px-2.5 sm:py-1 bg-[#2d1e15] hover:bg-[#3d2a1d] text-[#e8ca84] border border-[#794a24] rounded-lg text-xs font-bold transition shadow flex items-center gap-1">
+                <i class="fa-solid fa-gear"></i>
+                <span class="hidden sm:inline text-xs ml-0.5">Pravidla</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-5">
+
+        <!-- ================= PANEL 1: CONTROL (OVLÁDÁNÍ) ================= -->
+        <section id="viewControl" class="md:col-span-7 flex flex-col gap-3">
+
+            <!-- PLAYER SWITCHER RAIL -->
+            <div class="wood-box rounded-xl p-2.5 sm:p-3 border-2 border-[#794a24] flex flex-col gap-2">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-[#c69214] font-bold tracking-wider uppercase text-[11px] flex items-center gap-1">
+                        <i class="fa-solid fa-users"></i> Výběr hráče:
+                    </span>
+                    <button onclick="cycleNextPlayer()" class="text-xs text-[#f5d77f] hover:text-white bg-[#422919] hover:bg-[#593822] px-2.5 py-1 rounded border border-[#794a24] flex items-center gap-1 transition">
+                        <span>Další</span> <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </button>
+                </div>
+
+                <!-- Horizontal scrollable player list -->
+                <div id="playerPillsContainer" class="flex gap-2 overflow-x-auto pb-1 pt-0.5 no-scrollbar items-stretch">
+                    <!-- Populated by renderPlayerPills() -->
+                </div>
+            </div>
+
+            <!-- ACTIVE TURN DISPLAY & BANK SUMMARY -->
+            <div class="wood-box rounded-xl p-3 sm:p-3.5 flex flex-col gap-3 relative border-2 border-[#794a24]">
+                <div class="flex items-center justify-between border-b border-[#794a24]/60 pb-2">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider text-[#bda282] font-semibold">Hází hráč</span>
+                        <div class="flex items-baseline gap-2">
+                            <h2 id="currentTurnName" class="text-xl sm:text-2xl font-bold text-[#f5d77f] leading-none">--</h2>
+                            <span id="currentTurnRankBadge" class="text-[11px] text-[#e8ca84] bg-[#472c1a] px-1.5 py-0.5 rounded border border-[#794a24]">1. místo</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] uppercase tracking-wider text-[#bda282] font-semibold">Už má nahráno</span>
+                        <div id="currentBankScore" class="text-lg sm:text-xl font-bold text-[#ebdcb9]">0 b.</div>
+                    </div>
+                </div>
+
+                <!-- Live Round Points Accumulator -->
+                <div class="bg-[#150d09] rounded-lg p-2.5 border border-[#794a24] flex items-center justify-between">
+                    <div>
+                        <div class="text-[11px] text-[#bda282]">V tomto tahu nahráno:</div>
+                        <div id="currentTurnSum" class="text-3xl sm:text-4xl font-black text-[#63e263] leading-none my-0.5">
+                            +0 <span class="text-xs font-normal text-[#ebdcb9]">b.</span>
+                        </div>
+                        <div id="projectedTotal" class="text-[11px] text-[#cbb387]">
+                            Celkem po zapsání: <b>0 b.</b>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col items-end gap-1.5 max-w-[55%]">
+                        <div id="chipsContainer" class="flex flex-wrap gap-1 justify-end max-h-14 overflow-y-auto pr-0.5">
+                            <span class="text-[11px] text-[#84532a] italic">Vyber kombinaci níže</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="clearCurrentTurn()" id="btnClearTurn" class="text-[11px] text-[#e27e7e] hover:text-red-300 underline disabled:opacity-30 disabled:no-underline" disabled>
+                                Smazat
+                            </button>
+                            <span class="text-[#794a24]">|</span>
+                            <button onclick="undoLastCombo()" id="btnUndoTurn" class="text-[11px] text-[#f5d77f] hover:text-white underline disabled:opacity-30 disabled:no-underline" disabled>
+                                <i class="fa-solid fa-rotate-left"></i> Zpět
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Primary Action Buttons (Bank / Bust) -->
+                <div class="grid grid-cols-2 gap-2.5 pt-0.5">
+                    <button onclick="recordTurnScore()" id="btnBankScore" class="bg-gradient-to-b from-[#3b6e22] to-[#244714] hover:from-[#49862b] hover:to-[#2e5c1a] text-[#f1faee] py-3 px-3 rounded-lg font-bold shadow-lg border border-[#64a338] transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-35 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-sack-dollar text-yellow-300 text-base sm:text-lg"></i>
+                        <span class="text-sm sm:text-base tracking-wide">ZAPSAT BODY</span>
+                    </button>
+                    <button onclick="triggerBust()" id="btnBust" class="bg-gradient-to-b from-[#7d1c1c] to-[#4e0e0e] hover:from-[#9c2525] hover:to-[#611313] text-[#fee2e2] py-3 px-3 rounded-lg font-bold shadow-lg border border-[#ba3939] transition flex items-center justify-center gap-2 active:scale-95">
+                        <i class="fa-solid fa-ban text-red-300 text-base sm:text-lg"></i>
+                        <span class="text-sm sm:text-base tracking-wide">NULA</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================= COMBINATIONS SECTION ================= -->
+            <div class="wood-box rounded-xl p-3 border-2 border-[#794a24] flex flex-col gap-3">
+                
+                <!-- 1. Singles (1 & 5) -->
+                <div>
+                    <div class="text-[11px] font-bold text-[#c69214] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                        <span><i class="fa-solid fa-bolt mr-1"></i> Samostatné bodované kostky</span>
+                        <span class="text-[10px] text-[#bda282] font-normal">Kliknutím přidáš</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <!-- Die 1 Button -->
+                        <button onclick="addCombo('Jedna 1', 100)" class="dice-tap-btn p-2.5 rounded-lg flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-8 h-8 rounded bg-[#f4e8c1] text-[#2b1a0d] font-black flex items-center justify-center text-lg shadow border border-[#84532a]">1</span>
+                                <div class="text-left">
+                                    <div class="text-xs font-bold text-[#ebdcb9]">Jedna 1</div>
+                                    <div class="text-[10px] text-[#bda282]">+100 bodů</div>
+                                </div>
+                            </div>
+                            <span class="text-sm font-black text-[#63e263]">+100</span>
+                        </button>
+
+                        <!-- Die 5 Button -->
+                        <button onclick="addCombo('Jedna 5', 50)" class="dice-tap-btn p-2.5 rounded-lg flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-8 h-8 rounded bg-[#f4e8c1] text-[#2b1a0d] font-black flex items-center justify-center text-lg shadow border border-[#84532a]">5</span>
+                                <div class="text-left">
+                                    <div class="text-xs font-bold text-[#ebdcb9]">Jedna 5</div>
+                                    <div class="text-[10px] text-[#bda282]">+50 bodů</div>
+                                </div>
+                            </div>
+                            <span class="text-sm font-black text-[#63e263]">+50</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Groups (3x to 6x) -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-[11px] font-bold text-[#c69214] uppercase tracking-wider">
+                            <i class="fa-solid fa-cubes-stacked mr-1"></i> Skupiny stejných kostek (3× až 6×)
+                        </span>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <!-- Row 1s -->
+                        <div class="bg-[#1f130b] p-1.5 rounded-lg border border-[#794a24]/60 flex items-center gap-1.5">
+                            <div class="w-7 h-7 rounded bg-[#ebdcb9] text-[#2b1a0d] font-black flex items-center justify-center text-sm shrink-0 border border-[#84532a]">
+                                1
+                            </div>
+                            <div class="grid grid-cols-4 gap-1 flex-grow">
+                                <button onclick="addCombo('3× Jednička', 1000)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">3×</div>
+                                    <div class="text-[11px] font-bold text-[#f5d77f]">1 000</div>
+                                </button>
+                                <button onclick="addCombo('4× Jednička', 2000)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">4×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">2 000</div>
+                                </button>
+                                <button onclick="addCombo('5× Jednička', 4000)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">5×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">4 000</div>
+                                </button>
+                                <button onclick="addCombo('6× Jednička', 8000)" class="dice-tap-btn py-1.5 px-1 rounded text-center border-red-800 bg-[#401818]">
+                                    <div class="text-[9px] text-red-300">6×</div>
+                                    <div class="text-[11px] font-black text-red-200">8 000</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Row 2s -->
+                        <div class="bg-[#1f130b] p-1.5 rounded-lg border border-[#794a24]/60 flex items-center gap-1.5">
+                            <div class="w-7 h-7 rounded bg-[#ebdcb9] text-[#2b1a0d] font-black flex items-center justify-center text-sm shrink-0 border border-[#84532a]">
+                                2
+                            </div>
+                            <div class="grid grid-cols-4 gap-1 flex-grow">
+                                <button onclick="addCombo('3× Dvojka', 200)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">3×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">200</div>
+                                </button>
+                                <button onclick="addCombo('4× Dvojka', 400)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">4×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">400</div>
+                                </button>
+                                <button onclick="addCombo('5× Dvojka', 800)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">5×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">800</div>
+                                </button>
+                                <button onclick="addCombo('6× Dvojka', 1600)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">6×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">1 600</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Row 3s -->
+                        <div class="bg-[#1f130b] p-1.5 rounded-lg border border-[#794a24]/60 flex items-center gap-1.5">
+                            <div class="w-7 h-7 rounded bg-[#ebdcb9] text-[#2b1a0d] font-black flex items-center justify-center text-sm shrink-0 border border-[#84532a]">
+                                3
+                            </div>
+                            <div class="grid grid-cols-4 gap-1 flex-grow">
+                                <button onclick="addCombo('3× Trojka', 300)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">3×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">300</div>
+                                </button>
+                                <button onclick="addCombo('4× Trojka', 600)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">4×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">600</div>
+                                </button>
+                                <button onclick="addCombo('5× Trojka', 1200)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">5×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">1 200</div>
+                                </button>
+                                <button onclick="addCombo('6× Trojka', 2400)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">6×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">2 400</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Row 4s -->
+                        <div class="bg-[#1f130b] p-1.5 rounded-lg border border-[#794a24]/60 flex items-center gap-1.5">
+                            <div class="w-7 h-7 rounded bg-[#ebdcb9] text-[#2b1a0d] font-black flex items-center justify-center text-sm shrink-0 border border-[#84532a]">
+                                4
+                            </div>
+                            <div class="grid grid-cols-4 gap-1 flex-grow">
+                                <button onclick="addCombo('3× Čtyřka', 400)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">3×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">400</div>
+                                </button>
+                                <button onclick="addCombo('4× Čtyřka', 800)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">4×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">800</div>
+                                </button>
+                                <button onclick="addCombo('5× Čtyřka', 1600)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">5×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">1 600</div>
+                                </button>
+                                <button onclick="addCombo('6× Čtyřka', 3200)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">6×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">3 200</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Row 5s -->
+                        <div class="bg-[#1f130b] p-1.5 rounded-lg border border-[#794a24]/60 flex items-center gap-1.5">
+                            <div class="w-7 h-7 rounded bg-[#ebdcb9] text-[#2b1a0d] font-black flex items-center justify-center text-sm shrink-0 border border-[#84532a]">
+                                5
+                            </div>
+                            <div class="grid grid-cols-4 gap-1 flex-grow">
+                                <button onclick="addCombo('3× Pětka', 500)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">3×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">500</div>
+                                </button>
+                                <button onclick="addCombo('4× Pětka', 1000)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">4×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">1 000</div>
+                                </button>
+                                <button onclick="addCombo('5× Pětka', 2000)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">5×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">2 000</div>
+                                </button>
+                                <button onclick="addCombo('6× Pětka', 4000)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">6×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">4 000</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Row 6s -->
+                        <div class="bg-[#1f130b] p-1.5 rounded-lg border border-[#794a24]/60 flex items-center gap-1.5">
+                            <div class="w-7 h-7 rounded bg-[#ebdcb9] text-[#2b1a0d] font-black flex items-center justify-center text-sm shrink-0 border border-[#84532a]">
+                                6
+                            </div>
+                            <div class="grid grid-cols-4 gap-1 flex-grow">
+                                <button onclick="addCombo('3× Šestka', 600)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">3×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">600</div>
+                                </button>
+                                <button onclick="addCombo('4× Šestka', 1200)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">4×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">1 200</div>
+                                </button>
+                                <button onclick="addCombo('5× Šestka', 2400)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">5×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">2 400</div>
+                                </button>
+                                <button onclick="addCombo('6× Šestka', 4800)" class="dice-tap-btn py-1.5 px-1 rounded text-center">
+                                    <div class="text-[9px] text-[#bda282]">6×</div>
+                                    <div class="text-[11px] font-bold text-[#ebdcb9]">4 800</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Special Combinations (Postupky & Páry) -->
+                <div>
+                    <span class="text-[11px] font-bold text-[#c69214] uppercase tracking-wider block mb-1.5">
+                        <i class="fa-solid fa-scroll mr-1"></i> Speciální kombinace celého hodu
+                    </span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="addCombo('Malá postupka (1-5)', 500)" class="dice-tap-btn p-2 rounded-lg text-left">
+                            <div class="text-xs font-bold text-[#ebdcb9]">Postupka 1–5</div>
+                            <div class="text-[11px] font-bold text-[#63e263]">+500 b.</div>
+                        </button>
+                        <button onclick="addCombo('Velká postupka (2-6)', 750)" class="dice-tap-btn p-2 rounded-lg text-left">
+                            <div class="text-xs font-bold text-[#ebdcb9]">Postupka 2–6</div>
+                            <div class="text-[11px] font-bold text-[#63e263]">+750 b.</div>
+                        </button>
+                        <button onclick="addCombo('Plná postupka (1-6)', 1500)" class="dice-tap-btn p-2 rounded-lg text-left">
+                            <div class="text-xs font-bold text-[#ebdcb9]">Postupka 1–6</div>
+                            <div class="text-[11px] font-bold text-[#f5d77f]">+1 500 b.</div>
+                        </button>
+                        <button onclick="addCombo('Tři páry (2+2+2)', 750)" class="dice-tap-btn p-2 rounded-lg text-left">
+                            <div class="text-xs font-bold text-[#ebdcb9]">Tři páry (dvojice)</div>
+                            <div class="text-[11px] font-bold text-[#63e263]">+750 b.</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. Manual Score Input -->
+                <div class="pt-2 border-t border-[#794a24]/50 flex items-center justify-between text-xs text-[#bda282]">
+                    <span>Ruční zadání:</span>
+                    <div class="flex items-center gap-1.5">
+                        <input id="manualPointsInput" type="number" step="50" placeholder="+ body" class="w-24 bg-[#150d09] border border-[#794a24] rounded px-2 py-1 text-right text-xs text-[#ebdcb9] focus:border-[#c69214] outline-none">
+                        <button onclick="addManualScore()" class="bg-[#4a2e1c] hover:bg-[#613c24] text-[#f5d77f] font-bold px-3 py-1 rounded text-xs border border-[#794a24]">
+                            + Přidat
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ================= PANEL 2: LEADERBOARD & STATS ================= -->
+        <section id="viewLeaderboard" class="md:col-span-5 flex flex-col gap-3 hidden md:flex">
+            
+            <!-- Parchment Ranked Standings -->
+            <div class="parchment rounded-xl p-4 shadow-xl flex flex-col min-h-[360px]">
+                <div class="flex justify-between items-center border-b-2 border-[#794a24] pb-2 mb-3">
+                    <h3 class="text-base font-bold tracking-wider text-[#2b1a0d] flex items-center gap-1.5">
+                        <i class="fa-solid fa-crown text-[#9a6e13]"></i> ŽEBŘÍČEK HRÁČŮ
+                    </h3>
+                    <div class="text-xs font-bold bg-[#794a24] text-[#f5d77f] px-2 py-0.5 rounded shadow">
+                        Cíl: <span id="labelTargetScore">4 000</span> b.
+                    </div>
+                </div>
+
+                <!-- Dynamic Player Roster -->
+                <div id="leaderboardList" class="flex flex-col gap-2 flex-grow">
+                    <!-- Populated by renderLeaderboard() -->
+                </div>
+
+                <div class="mt-3 pt-2.5 border-t border-[#794a24]/50 flex items-center justify-between text-xs text-[#523319] font-bold">
+                    <span>Kolo hry: <span id="roundCounterText">1</span></span>
+                    <button onclick="openConfigModal()" class="text-[#794a24] hover:text-[#9a6e13] underline">
+                        Upravit hráče
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tavern Chronicle / Turn Log -->
+            <div class="wood-box rounded-xl p-3.5 border-2 border-[#794a24] flex flex-col max-h-64">
+                <div class="flex justify-between items-center border-b border-[#794a24]/60 pb-1.5 mb-2">
+                    <h4 class="text-xs font-bold tracking-wider text-[#e8ca84] flex items-center gap-1.5">
+                        <i class="fa-solid fa-scroll"></i> KRONIKA HOSPODY
+                    </h4>
+                    <span class="text-[10px] text-[#bda282]">poslední tahy</span>
+                </div>
+                <div id="historyLogList" class="overflow-y-auto pr-1 flex flex-col gap-1 text-xs text-[#bda282]">
+                    <!-- Dynamic logs -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- MODAL: SETTINGS & PLAYERS -->
+    <div id="configModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+        <div class="wood-box rounded-xl max-w-sm w-full p-5 border-2 border-[#c69214] shadow-2xl flex flex-col gap-4">
+            <div class="flex justify-between items-center border-b border-[#794a24] pb-2">
+                <h3 class="text-base font-bold text-[#f5d77f] flex items-center gap-2">
+                    <i class="fa-solid fa-scroll"></i> Nastavení Partie
+                </h3>
+                <button onclick="closeConfigModal()" class="text-[#bda282] hover:text-[#f5d77f] text-xl leading-none">&times;</button>
+            </div>
+
+            <!-- Target Score -->
+            <div>
+                <label class="block text-xs font-bold text-[#ebdcb9] mb-1.5">Cílový počet bodů:</label>
+                <div class="grid grid-cols-4 gap-1.5">
+                    <button type="button" onclick="setTargetScore(1500)" class="py-1.5 rounded border border-[#794a24] bg-[#3a2618] hover:bg-[#523724] text-xs font-bold text-[#ebdcb9]">1 500</button>
+                    <button type="button" onclick="setTargetScore(2000)" class="py-1.5 rounded border border-[#794a24] bg-[#3a2618] hover:bg-[#523724] text-xs font-bold text-[#ebdcb9]">2 000</button>
+                    <button type="button" onclick="setTargetScore(4000)" class="py-1.5 rounded border border-[#794a24] bg-[#3a2618] hover:bg-[#523724] text-xs font-bold text-[#ebdcb9]">4 000</button>
+                    <input id="customTargetInput" type="number" step="500" placeholder="Vlastní" onchange="setTargetScore(this.value)" class="w-full bg-[#150d09] border border-[#794a24] rounded px-1 text-center text-xs text-[#ebdcb9] focus:border-[#c69214] outline-none">
+                </div>
+            </div>
+
+            <!-- Player List Manager -->
+            <div>
+                <label class="block text-xs font-bold text-[#ebdcb9] mb-1.5">Hráči v krčmě:</label>
+                <div id="modalPlayerList" class="flex flex-col gap-1.5 max-h-36 overflow-y-auto mb-2 pr-1">
+                    <!-- Dynamic modal player list -->
+                </div>
+                <div class="flex gap-1.5">
+                    <input id="newPlayerNameInput" type="text" placeholder="Jméno (např. Jan Ptáček)" class="flex-grow bg-[#150d09] border border-[#794a24] rounded px-2.5 py-1.5 text-xs text-[#ebdcb9] focus:border-[#c69214] outline-none">
+                    <button onclick="addNewPlayerFromModal()" class="bg-[#3b6e22] hover:bg-[#49862b] text-white px-3 py-1.5 rounded text-xs font-bold border border-[#64a338]">
+                        Přidat
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Bottom Controls -->
+            <div class="flex items-center justify-between border-t border-[#794a24] pt-3">
+                <button onclick="resetWholeGame()" class="text-xs text-red-400 hover:text-red-300 flex items-center gap-1">
+                    <i class="fa-solid fa-arrow-rotate-left"></i> Restartovat body
+                </button>
+                <button onclick="closeConfigModal()" class="bg-[#794a24] hover:bg-[#965c2c] text-[#f5d77f] px-3.5 py-1.5 rounded text-xs font-bold shadow">
+                    Hotovo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: VICTORY ANNOUNCEMENT -->
+    <div id="victoryModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="parchment rounded-xl max-w-sm w-full p-6 border-4 border-[#c69214] shadow-2xl flex flex-col items-center text-center gap-3 relative">
+            <div class="w-14 h-14 rounded-full bg-[#3d2411] border-2 border-[#c69214] flex items-center justify-center text-2xl text-[#f5d77f] shadow">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <div>
+                <span class="text-[11px] font-bold text-[#794a24] uppercase tracking-widest">Královské vítězství!</span>
+                <h2 id="winnerName" class="text-2xl font-black text-[#2b1a0d] tracking-wide mt-0.5">Jindřich</h2>
+                <p class="text-xs font-semibold text-[#5a381a] mt-1">dosáhl vítězného skóre a vyhrál všechny groše v hospodě!</p>
+            </div>
+            <div class="bg-[#3d2411] text-[#f5d77f] py-1.5 px-5 rounded-lg text-base font-bold border border-[#c69214]" id="winnerScoreBox">
+                4 250 b.
+            </div>
+            <button onclick="closeVictoryModal()" class="bg-[#794a24] hover:bg-[#5c3719] text-[#f4e8c1] font-bold px-5 py-2 rounded-lg text-xs transition shadow border border-[#3d2411] mt-1">
+                Sláva vítězi! Pokračovat
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            targetScore: 4000,
+            players: [
+                { id: 1, name: "Jindřich", score: 0, rounds: 0 },
+                { id: 2, name: "Jan Ptáček", score: 0, rounds: 0 },
+                { id: 3, name: "Otec Bohuta", score: 0, rounds: 0 }
+            ],
+            currentPlayerIndex: 0,
+            currentTurnComboStack: [],
+            history: [],
+            currentRound: 1,
+            winnerDeclared: false
+        };
+
+        function loadSavedState() {
+            try {
+                const saved = localStorage.getItem('kcd_farkle_v2');
+                if (saved) {
+                    gameState = JSON.parse(saved);
+                }
+            } catch(e) {
+                console.warn("Storage could not be loaded", e);
+            }
+        }
+
+        function persistState() {
+            try {
+                localStorage.setItem('kcd_farkle_v2', JSON.stringify(gameState));
+            } catch(e) {}
+        }
+
+        function addCombo(label, points) {
+            gameState.currentTurnComboStack.push({ label, points });
+            renderTurnView();
+        }
+
+        function undoLastCombo() {
+            if (gameState.currentTurnComboStack.length > 0) {
+                gameState.currentTurnComboStack.pop();
+                renderTurnView();
+            }
+        }
+
+        function clearCurrentTurn() {
+            gameState.currentTurnComboStack = [];
+            renderTurnView();
+        }
+
+        function addManualScore() {
+            const input = document.getElementById('manualPointsInput');
+            const val = parseInt(input.value, 10);
+            if (!isNaN(val) && val > 0) {
+                addCombo(`Ručně (+${val})`, val);
+                input.value = '';
+            }
+        }
+
+        function getCurrentTurnPoints() {
+            return gameState.currentTurnComboStack.reduce((sum, item) => sum + item.points, 0);
+        }
+
+        function selectActivePlayer(id) {
+            const idx = gameState.players.findIndex(p => p.id === id);
+            if (idx !== -1) {
+                gameState.currentPlayerIndex = idx;
+                gameState.currentTurnComboStack = [];
+                persistState();
+                renderAll();
+            }
+        }
+
+        function cycleNextPlayer() {
+            if (gameState.players.length === 0) return;
+            const nextIdx = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+            if (nextIdx === 0) {
+                gameState.currentRound++;
+            }
+            gameState.currentPlayerIndex = nextIdx;
+            gameState.currentTurnComboStack = [];
+            persistState();
+            renderAll();
+        }
+
+        function recordTurnScore() {
+            const turnPoints = getCurrentTurnPoints();
+            if (turnPoints <= 0) return;
+
+            const player = gameState.players[gameState.currentPlayerIndex];
+            player.score += turnPoints;
+            player.rounds += 1;
+
+            gameState.history.unshift({
+                player: player.name,
+                points: turnPoints,
+                total: player.score,
+                type: 'bank',
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+
+            if (player.score >= gameState.targetScore && !gameState.winnerDeclared) {
+                gameState.winnerDeclared = true;
+                showVictory(player);
+            }
+
+            advancePlayer();
+        }
+
+        function triggerBust() {
+            const player = gameState.players[gameState.currentPlayerIndex];
+            const lostPoints = getCurrentTurnPoints();
+            player.rounds += 1;
+
+            gameState.history.unshift({
+                player: player.name,
+                points: 0,
+                lost: lostPoints,
+                total: player.score,
+                type: 'bust',
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+
+            if (navigator.vibrate) {
+                navigator.vibrate([70, 40, 70]);
+            }
+
+            const controlView = document.getElementById('viewControl');
+            controlView.classList.add('shake');
+            setTimeout(() => controlView.classList.remove('shake'), 350);
+
+            advancePlayer();
+        }
+
+        function advancePlayer() {
+            gameState.currentTurnComboStack = [];
+            const nextIdx = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+            if (nextIdx === 0) {
+                gameState.currentRound++;
+            }
+            gameState.currentPlayerIndex = nextIdx;
+            persistState();
+            renderAll();
+        }
+
+        function setTargetScore(val) {
+            const num = parseInt(val, 10);
+            if (!isNaN(num) && num > 0) {
+                gameState.targetScore = num;
+                document.getElementById('labelTargetScore').innerText = num.toLocaleString('cs-CZ');
+                persistState();
+                renderLeaderboard();
+            }
+        }
+
+        function addNewPlayerFromModal() {
+            const input = document.getElementById('newPlayerNameInput');
+            const name = input.value.trim();
+            if (name) {
+                gameState.players.push({
+                    id: Date.now(),
+                    name: name,
+                    score: 0,
+                    rounds: 0
+                });
+                input.value = '';
+                persistState();
+                renderConfigModalPlayers();
+                renderAll();
+            }
+        }
+
+        function removePlayer(id) {
+            if (gameState.players.length <= 1) return;
+            gameState.players = gameState.players.filter(p => p.id !== id);
+            if (gameState.currentPlayerIndex >= gameState.players.length) {
+                gameState.currentPlayerIndex = 0;
+            }
+            gameState.currentTurnComboStack = [];
+            persistState();
+            renderConfigModalPlayers();
+            renderAll();
+        }
+
+        function resetWholeGame() {
+            gameState.players.forEach(p => {
+                p.score = 0;
+                p.rounds = 0;
+            });
+            gameState.currentPlayerIndex = 0;
+            gameState.currentTurnComboStack = [];
+            gameState.history = [];
+            gameState.currentRound = 1;
+            gameState.winnerDeclared = false;
+            persistState();
+            closeConfigModal();
+            renderAll();
+        }
+
+        function renderPlayerPills() {
+            const container = document.getElementById('playerPillsContainer');
+            if (!container) return;
+
+            container.innerHTML = gameState.players.map((p, idx) => {
+                const isActive = idx === gameState.currentPlayerIndex;
+                return `
+                    <button onclick="selectActivePlayer(${p.id})" class="player-pill shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold ${
+                        isActive 
+                            ? 'active' 
+                            : 'bg-[#1b100a] text-[#bda282] border-[#794a24]/70 hover:bg-[#2d1b11]'
+                    }">
+                        <i class="fa-solid ${isActive ? 'fa-dice-d6 text-[#f5d77f]' : 'fa-user text-[#794a24]'} text-[11px]"></i>
+                        <span class="truncate max-w-[100px] text-left text-[#ebdcb9]">${p.name}</span>
+                        <span class="text-[10px] px-1.5 py-0.2 rounded bg-black/40 text-[#f5d77f] font-normal">${p.score}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderTurnView() {
+            const player = gameState.players[gameState.currentPlayerIndex];
+            if (!player) return;
+
+            document.getElementById('currentTurnName').innerText = player.name;
+            document.getElementById('currentBankScore').innerText = `${player.score.toLocaleString('cs-CZ')} b.`;
+
+            const sorted = [...gameState.players].sort((a, b) => b.score - a.score);
+            const rank = sorted.findIndex(p => p.id === player.id) + 1;
+            document.getElementById('currentTurnRankBadge').innerText = `${rank}. místo`;
+
+            const turnPoints = getCurrentTurnPoints();
+            document.getElementById('currentTurnSum').innerHTML = `+${turnPoints.toLocaleString('cs-CZ')} <span class="text-xs font-normal text-[#ebdcb9]">b.</span>`;
+            document.getElementById('projectedTotal').innerHTML = `Celkem po zapsání: <b>${(player.score + turnPoints).toLocaleString('cs-CZ')} b.</b>`;
+
+            const chips = document.getElementById('chipsContainer');
+            const undoBtn = document.getElementById('btnUndoTurn');
+            const clearBtn = document.getElementById('btnClearTurn');
+            const bankBtn = document.getElementById('btnBankScore');
+
+            if (gameState.currentTurnComboStack.length === 0) {
+                chips.innerHTML = `<span class="text-[11px] text-[#84532a] italic">Vyber kombinaci níže</span>`;
+                undoBtn.disabled = true;
+                clearBtn.disabled = true;
+                bankBtn.disabled = true;
+            } else {
+                chips.innerHTML = gameState.currentTurnComboStack.map(item => `
+                    <span class="inline-flex items-center gap-1 bg-[#3a2517] border border-[#794a24] text-[#f5d77f] px-1.5 py-0.5 rounded text-[10px]">
+                        ${item.label}
+                    </span>
+                `).join('');
+                undoBtn.disabled = false;
+                clearBtn.disabled = false;
+                bankBtn.disabled = false;
+            }
+        }
+
+        function renderLeaderboard() {
+            const container = document.getElementById('leaderboardList');
+            document.getElementById('labelTargetScore').innerText = gameState.targetScore.toLocaleString('cs-CZ');
+            document.getElementById('roundCounterText').innerText = gameState.currentRound;
+
+            const sortedPlayers = [...gameState.players].sort((a, b) => b.score - a.score);
+
+            container.innerHTML = sortedPlayers.map((player, idx) => {
+                const isCurrent = gameState.players[gameState.currentPlayerIndex]?.id === player.id;
+                const percentage = Math.min(100, Math.round((player.score / gameState.targetScore) * 100));
+
+                return `
+                    <div onclick="selectActivePlayer(${player.id})" class="cursor-pointer p-2 rounded-lg border transition ${
+                        isCurrent 
+                            ? 'bg-[#e2c792] border-[#794a24] shadow ring-2 ring-[#9a6e13]' 
+                            : 'bg-[#ebdcb9]/80 border-[#bda282] hover:bg-[#ebdcb9]'
+                    }">
+                        <div class="flex justify-between items-center mb-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                                    idx === 0 ? 'bg-[#9a6e13] text-[#f5d77f]' : 'bg-[#794a24] text-[#ebdcb9]'
+                                }">
+                                    ${idx === 0 ? '<i class="fa-solid fa-crown text-[9px]"></i>' : idx + 1}
+                                </span>
+                                <span class="font-bold text-xs sm:text-sm text-[#2b1a0d]">
+                                    ${player.name}
+                                    ${isCurrent ? '<i class="fa-solid fa-feather text-[#9a6e13] ml-1"></i>' : ''}
+                                </span>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-black text-xs sm:text-sm text-[#2b1a0d]">${player.score.toLocaleString('cs-CZ')}</span>
+                                <span class="text-[10px] text-[#633e1c]"> / ${gameState.targetScore.toLocaleString('cs-CZ')}</span>
+                            </div>
+                        </div>
+                        <div class="w-full bg-[#cbb387] rounded-full h-1.5 overflow-hidden border border-[#9a764d]">
+                            <div class="h-full bg-gradient-to-r from-[#9a6e13] to-[#3f7524]" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyLogList');
+            if (gameState.history.length === 0) {
+                list.innerHTML = `<div class="text-center italic py-4 text-[#755943]">Zatím žádné zapsané tahy</div>`;
+                return;
+            }
+
+            list.innerHTML = gameState.history.slice(0, 15).map(item => {
+                const isZero = item.type === 'bust' || item.points === 0;
+                return `
+                    <div class="flex items-center justify-between py-1 border-b border-[#794a24]/30">
+                        <span class="font-bold ${isZero ? 'text-red-400' : 'text-[#e8ca84]'}">
+                            ${item.player}
+                        </span>
+                        <div class="flex items-center gap-1.5">
+                            ${isZero 
+                                ? `<span class="text-red-400 font-bold">Nula (0 b.)</span>` 
+                                : `<span class="text-[#63e263] font-bold">+${item.points.toLocaleString('cs-CZ')}</span>`
+                            }
+                            <span class="text-[10px] text-[#7a624f]">(${item.total} b.)</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderConfigModalPlayers() {
+            const list = document.getElementById('modalPlayerList');
+            list.innerHTML = gameState.players.map(p => `
+                <div class="flex items-center justify-between bg-[#150d09] p-1.5 px-2.5 rounded border border-[#794a24]">
+                    <span class="text-xs font-semibold text-[#ebdcb9]">${p.name} (${p.score} b.)</span>
+                    <button onclick="removePlayer(${p.id})" class="text-xs text-red-400 hover:text-red-300 px-1">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function openConfigModal() {
+            renderConfigModalPlayers();
+            document.getElementById('configModal').classList.remove('hidden');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('configModal').classList.add('hidden');
+        }
+
+        function showVictory(player) {
+            document.getElementById('winnerName').innerText = player.name;
+            document.getElementById('winnerScoreBox').innerText = `${player.score.toLocaleString('cs-CZ')} bodů`;
+            document.getElementById('victoryModal').classList.remove('hidden');
+        }
+
+        function closeVictoryModal() {
+            document.getElementById('victoryModal').classList.add('hidden');
+        }
+
+        function switchView(view) {
+            const controlView = document.getElementById('viewControl');
+            const boardView = document.getElementById('viewLeaderboard');
+            const btnControl = document.getElementById('btnTabControl');
+            const btnBoard = document.getElementById('btnTabBoard');
+
+            if (view === 'control') {
+                controlView.classList.remove('hidden');
+                boardView.classList.add('hidden');
+                btnControl.classList.add('bg-[#794a24]', 'text-[#f5d77f]', 'border', 'border-[#c69214]');
+                btnControl.classList.remove('text-[#bda282]');
+                btnBoard.classList.remove('bg-[#794a24]', 'text-[#f5d77f]', 'border', 'border-[#c69214]');
+                btnBoard.classList.add('text-[#bda282]');
+            } else {
+                controlView.classList.add('hidden');
+                boardView.classList.remove('hidden');
+                btnBoard.classList.add('bg-[#794a24]', 'text-[#f5d77f]', 'border', 'border-[#c69214]');
+                btnBoard.classList.remove('text-[#bda282]');
+                btnControl.classList.remove('bg-[#794a24]', 'text-[#f5d77f]', 'border', 'border-[#c69214]');
+                btnControl.classList.add('text-[#bda282]');
+            }
+        }
+
+        function renderAll() {
+            renderPlayerPills();
+            renderTurnView();
+            renderLeaderboard();
+        }
+
+        window.onload = function() {
+            loadSavedState();
+            renderAll();
+        };
+    </script>
+</body>
+</html>
