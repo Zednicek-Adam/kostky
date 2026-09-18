@@ -539,25 +539,25 @@
         function getDiceMultiples(dieValue) {
             if (dieValue === 1) {
                 return [
-                    { label: '3× (1 000 b.)', short: '3× 1', points: 1000 },
-                    { label: '4× (2 000 b.)', short: '4× 1', points: 2000 },
-                    { label: '5× (4 000 b.)', short: '5× 1', points: 4000 },
-                    { label: '6× (8 000 b.)', short: '6× 1', points: 8000 }
+                    { label: '3× 1', display: '3×', points: 1000 },
+                    { label: '4× 1', display: '4×', points: 2000 },
+                    { label: '5× 1', display: '5×', points: 4000 },
+                    { label: '6× 1', display: '6×', points: 8000 }
                 ];
             } else if (dieValue === 5) {
                 return [
-                    { label: '3× (500 b.)', short: '3× 5', points: 500 },
-                    { label: '4× (1 000 b.)', short: '4× 5', points: 1000 },
-                    { label: '5× (2 000 b.)', short: '5× 5', points: 2000 },
-                    { label: '6× (4 000 b.)', short: '6× 5', points: 4000 }
+                    { label: '3× 5', display: '3×', points: 500 },
+                    { label: '4× 5', display: '4×', points: 1000 },
+                    { label: '5× 5', display: '5×', points: 2000 },
+                    { label: '6× 5', display: '6×', points: 4000 }
                 ];
             } else {
                 const base = dieValue * 100;
                 return [
-                    { label: `3× (${base.toLocaleString('cs-CZ')} b.)`, short: `3× ${dieValue}`, points: base },
-                    { label: `4× (${(base * 2).toLocaleString('cs-CZ')} b.)`, short: `4× ${dieValue}`, points: base * 2 },
-                    { label: `5× (${(base * 4).toLocaleString('cs-CZ')} b.)`, short: `5× ${dieValue}`, points: base * 4 },
-                    { label: `6× (${(base * 8).toLocaleString('cs-CZ')} b.)`, short: `6× ${dieValue}`, points: base * 8 }
+                    { label: `3× ${dieValue}`, display: '3×', points: base },
+                    { label: `4× ${dieValue}`, display: '4×', points: base * 2 },
+                    { label: `5× ${dieValue}`, display: '5×', points: base * 4 },
+                    { label: `6× ${dieValue}`, display: '6×', points: base * 8 }
                 ];
             }
         }
@@ -581,9 +581,9 @@
             const options = getDiceMultiples(dieValue);
 
             optionsGrid.innerHTML = options.map(opt => `
-                <button onclick="selectDieMultiple('${opt.short}', ${opt.points})" class="bg-[#2d1b11] hover:bg-[#422819] active:scale-95 text-[#eadbb7] border border-[#6f421f] rounded-lg p-2.5 text-center transition flex flex-col justify-center items-center shadow">
-                    <span class="text-sm font-black text-[#f5d77f]">${opt.short}</span>
-                    <span class="text-xs font-bold text-[#5ce05c] mt-0.5">+${opt.points.toLocaleString('cs-CZ')}</span>
+                <button onclick="selectDieMultiple('${opt.label}', ${opt.points})" class="bg-[#2d1b11] hover:bg-[#422819] active:scale-95 text-[#eadbb7] border border-[#6f421f] rounded-lg py-2 px-2.5 transition flex items-center justify-between shadow">
+                    <span class="text-sm font-black text-[#f5d77f]">${opt.display}</span>
+                    <span class="text-xs font-bold text-[#5ce05c] whitespace-nowrap">+${opt.points.toLocaleString('cs-CZ')} b.</span>
                 </button>
             `).join('');
 
